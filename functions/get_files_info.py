@@ -1,5 +1,4 @@
 import os
-from config import MAX_CHARS
 
 def get_files_info(working_directory, directory=None):
     if not isinstance(directory, str) or directory == None:
@@ -24,20 +23,3 @@ def get_files_info(working_directory, directory=None):
     except Exception as e:
         return f"Error listing files: {e}"
 
-def get_file_content(working_directory, file_path):
-    root = os.path.abspath(working_directory)
-    file_content_string = root
-    if file_path:
-        file_content_string = os.path.abspath(os.path.join(working_directory, file_path))
-    if not root in file_content_string:
-        return f'Error: Cannot read "{file_path}" as it is outside the permitted working directory'
-    try:
-        if not os.path.isfile(file_content_string):
-            return f'Error: File not found or is not a regular file: "{file_content_string}"'
-        with open(file_content_string, "r") as f:
-            file_content_string = f.read(MAX_CHARS)
-        if len(file_content_string) == MAX_CHARS:
-            file_content_string = file_content_string[:MAX_CHARS] + f'[...File "{file_path}" truncated at 10000 characters]'
-        return file_content_string
-    except Exception as e:
-        return f'Error: File not found or is not a regular file: "{file_path}", {e}'
