@@ -1,2 +1,4 @@
 .env
 venv_agentic/
+__pycache__/
+functions/__pycache__/
