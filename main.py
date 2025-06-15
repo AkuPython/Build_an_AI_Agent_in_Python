@@ -7,6 +7,7 @@ from functions.get_files_info import schema_get_files_info
 from functions.get_file_content import schema_get_file_content
 from functions.run_python import schema_run_python
 from functions.write_file import schema_write_file
+from functions.call_function import call_function
 
 load_dotenv()
 api_key = os.environ.get("GEMINI_API_KEY")
@@ -63,11 +64,24 @@ resp = client.models.generate_content(
 )
 
 function_calls = resp.function_calls
+call_results = []
 if function_calls:
     for call in function_calls:
-        print(f"Calling function: {call.name}({call.args})")
+        call_results.append(call_function(call, verbose))
+    if len(call_results) > 1:
+        print("more than one")
+    try:
+        a = f"-> {call_results[0].parts[0].function_response.response}"
+        if verbose:
+            print(a)
+    except Exception as e:
+        raise Exception("Error:", e)
+    if not call_results:
+        raise Exception("no function responses generated, exiting.")
+
 else:
     print("Text:", resp.text)
+
 
 if resp.usage_metadata is not None and verbose:
     print("Prompt tokens:", resp.usage_metadata.prompt_token_count)
