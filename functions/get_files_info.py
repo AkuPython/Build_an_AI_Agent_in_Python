@@ -3,7 +3,7 @@ from google.genai import types
 
 def get_files_info(working_directory, directory=None):
     if not isinstance(directory, str) or directory == None:
-        f'Error: directory must be a string'
+        directory = ""
     assert isinstance(directory, str)
     root = os.path.abspath(working_directory)
     branch = root

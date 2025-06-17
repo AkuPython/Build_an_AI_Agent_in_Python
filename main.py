@@ -54,39 +54,65 @@ When a user asks a question or makes a request, make a function call plan. You c
 All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
 """
 
-resp = client.models.generate_content(
-    model=model,
-    contents=messages,
-    config=types.GenerateContentConfig(
-        system_instruction=system_prompt,
-        tools=[available_functions]
-    )
-)
 
-function_calls = resp.function_calls
-call_results = []
-if function_calls:
+
+def generate_content(client, messages, verbose):
+    # print("Client:", client)
+    # print("Messages:", messages)
+    resp = client.models.generate_content(
+        model=model,
+        contents=messages,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+            tools=[available_functions]
+        )
+    )
+    if resp.usage_metadata is not None and verbose:
+        print("Prompt tokens:", resp.usage_metadata.prompt_token_count)
+        print("Response tokens:", resp.usage_metadata.candidates_token_count)
+    elif verbose:
+        print("Couldn't get usage metadata")
+
+    if resp.candidates:
+        for candidate in resp.candidates:
+            # print(candidate)
+            function_call_content = candidate.content
+            messages.append(function_call_content)
+    
+    if not resp.function_calls:
+        return resp.text
+
+
+    function_calls = resp.function_calls
+    call_results = []
     for call in function_calls:
-        call_results.append(call_function(call, verbose))
-    if len(call_results) > 1:
-        print("more than one")
-    try:
-        a = f"-> {call_results[0].parts[0].function_response.response}"
-        if verbose:
-            print(a)
-    except Exception as e:
-        raise Exception("Error:", e)
+        # print("Call: ", call)
+        call_res = call_function(call, verbose)
+        if not call_res.parts or not call_res.parts[0].function_response:
+            raise Exception("No function result")
+        call_results.append(call_res.parts[0])
+    result = f"-> {call_results[0].parts[0].function_response.response}"
+    if verbose:
+        print(result)
     if not call_results:
         raise Exception("no function responses generated, exiting.")
-
-else:
-    print("Text:", resp.text)
+    messages.append(types.Content(role="tool", parts=call_results))
 
 
-if resp.usage_metadata is not None and verbose:
-    print("Prompt tokens:", resp.usage_metadata.prompt_token_count)
-    print("Response tokens:", resp.usage_metadata.candidates_token_count)
-elif verbose:
-    print("Couldn't get usage metadata")
+iters = 0
+max_iters = 5
+while True:
+    iters += 1
+    if iters > max_iters:
+        print(f"Max loops ({max_iters}) reached.")
+        sys.exit(1)
 
+    try:
+        final_response = generate_content(client, messages, verbose)
+        if final_response:
+            print("Final response:")
+            print(final_response)
+            break
+    except Exception as e:
+        print(f"Error in generate_content: {e}")
 
